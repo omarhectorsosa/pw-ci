@@ -6,35 +6,41 @@ on:
   pull_request:
     branches: [ main, master ]
 
+permissions:
+  contents: write   # 👉 necesario para publicar en GitHub Pages
+
 jobs:
   test:
-    timeout-minutes: 60
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
+      # 🔹 1. Clonar el repo
       - uses: actions/checkout@v5
 
+      # 🔹 2. Instalar Node y dependencias
       - uses: actions/setup-node@v5
         with:
           node-version: lts/*
-
       - name: Install dependencies
         run: npm ci
 
+      # 🔹 3. Instalar navegadores de Playwright
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
+      # 🔹 4. Ejecutar los tests con trace habilitado
       - name: Run Playwright tests
         run: npx playwright test --trace on
 
-      # 🔹 Publicar resumen del reporte en la interfaz de GitHub Actions
-      - name: Publicar resumen del reporte HTML
+      # 🔹 5. Publicar resumen en la ejecución
+      - name: Publicar resumen
         if: always()
         run: |
-          echo "## 📊 Playwright Test Report" >> $GITHUB_STEP_SUMMARY
-          echo "[Haz clic aquí para ver el reporte completo.](playwright-report/index.html)" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Playwright tests completados" >> $GITHUB_STEP_SUMMARY
+          echo "El reporte completo estará disponible en GitHub Pages en unos minutos." >> $GITHUB_STEP_SUMMARY
 
-      # 🔹 Subir los artefactos (reportes + traces)
+      # 🔹 6. Subir los artefactos (para backup)
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -44,3 +50,13 @@ jobs:
             test-results/
             **/trace.zip
           retention-days: 30
+
+      # 🔹 7. Publicar el reporte HTML en GitHub Pages
+      - name: Deploy Playwright report to GitHub Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: playwright-report
+          publish_branch: gh-pages
+          force_orphan: true
