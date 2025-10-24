@@ -3,60 +3,37 @@ name: Playwright Tests
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-
-permissions:
-  contents: write   # 👉 necesario para publicar en GitHub Pages
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-
     steps:
-      # 🔹 1. Clonar el repo
-      - uses: actions/checkout@v5
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      # 🔹 2. Instalar Node y dependencias
-      - uses: actions/setup-node@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: lts/*
+          node-version: 20
+
       - name: Install dependencies
         run: npm ci
 
-      # 🔹 3. Instalar navegadores de Playwright
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
-
-      # 🔹 4. Ejecutar los tests con trace habilitado
-      - name: Run Playwright tests
-        run: npx playwright test --trace on
-
-      # 🔹 5. Publicar resumen en la ejecución
-      - name: Publicar resumen
-        if: always()
+      - name: Run Playwright tests with tracing
         run: |
-          echo "## ✅ Playwright tests completados" >> $GITHUB_STEP_SUMMARY
-          echo "El reporte completo estará disponible en GitHub Pages en unos minutos." >> $GITHUB_STEP_SUMMARY
+          npx playwright install
+          npx playwright test --reporter=html --trace=on
 
-      # 🔹 6. Subir los artefactos (para backup)
-      - uses: actions/upload-artifact@v4
-        if: always()
+      # Guardar el reporte HTML como artefacto
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: |
-            playwright-report/
-            test-results/
-            **/trace.zip
-          retention-days: 30
+          path: playwright-report/
 
-      # 🔹 7. Publicar el reporte HTML en GitHub Pages
-      - name: Deploy Playwright report to GitHub Pages
-        if: always()
-        uses: peaceiris/actions-gh-pages@v3
+      # Guardar todos los trace.zip como artefactos
+      - name: Upload traces
+        uses: actions/upload-artifact@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: playwright-report
-          publish_branch: gh-pages
-          force_orphan: true
+          name: playwright-traces
+          path: '**/trace.zip'
