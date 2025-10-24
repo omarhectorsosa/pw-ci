@@ -7,6 +7,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -19,21 +20,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Playwright browsers
+        run: npx playwright install
+
       - name: Run Playwright tests with tracing
         run: |
-          npx playwright install
-          npx playwright test --reporter=html --trace=on
+          # Crear carpeta para resultados
+          mkdir -p test-results
+          
+          # Ejecutar tests, guardar trace por test en test-results/<test-name>/trace.zip
+          npx playwright test --reporter=html --trace=on --output=test-results || true
 
-      # Guardar el reporte HTML como artefacto
+      # Subir el reporte HTML
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: playwright-report/
 
-      # Guardar todos los trace.zip como artefactos
+      # Subir todos los trace.zip como artefactos
       - name: Upload traces
         uses: actions/upload-artifact@v4
         with:
           name: playwright-traces
-          path: '**/trace.zip'
+          path: test-results/**/*.zip
